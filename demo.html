@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MaskIshiba 動作確認ページ</title>
+<style>
+ body{font:14px/1.7 "Hiragino Sans",sans-serif;max-width:720px;margin:2em auto;padding:0 1em}
+ figure{margin:1.5em 0} img{width:260px;height:170px;object-fit:cover;background:#ccd}
+ figcaption{font-size:12px;color:#666} hr{margin:2em 0;border:0;border-top:1px solid #ddd}
+</style>
+<h1>MaskIshiba 動作確認ページ</h1>
+<p>拡張機能を読み込んだ状態でこのページを開くと、下の画像のうち石破前首相に関係するものだけがマスクされます。</p>
+
+<figure>
+  <img alt="記者会見する石破茂前首相" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='170'%3E%3Crect width='260' height='170' fill='%23789'/%3E%3Ctext x='130' y='90' fill='white' text-anchor='middle'%3EA: alt に名前%3C/text%3E%3C/svg%3E">
+  <figcaption>A: alt 属性に名前 → マスクされる</figcaption>
+</figure>
+
+<figure>
+  <img src="/photos/ishiba_20260901.jpg" alt="" width="260" height="170"
+       style="background:#789">
+  <figcaption>B: ファイル名が ishiba → マスクされる（画像自体は読み込めません）</figcaption>
+</figure>
+
+<figure>
+  <img alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='170'%3E%3Crect width='260' height='170' fill='%23897'/%3E%3Ctext x='130' y='90' fill='white' text-anchor='middle'%3EC: キャプション%3C/text%3E%3C/svg%3E">
+  <figcaption>石破前首相＝首相官邸（C: キャプションで判定）</figcaption>
+</figure>
+
+<figure>
+  <img alt="国会議事堂" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='170'%3E%3Crect width='260' height='170' fill='%23484'/%3E%3Ctext x='130' y='90' fill='white' text-anchor='middle'%3ED: 無関係%3C/text%3E%3C/svg%3E">
+  <figcaption>D: 無関係な写真 → ふつう／厳しめ では残る（「ゆるめ」だとマスクされる）</figcaption>
+</figure>
+
+<hr>
+<p>本文テキストのテスト: 石破茂前首相は本日、記者会見を行った。（「本文中の名前も塗りつぶす」を ON にすると隠れます）</p>

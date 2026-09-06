@@ -1,0 +1,37 @@
+/* MaskIshiba: マスク表示用スタイル */
+img.ishiba-masked,
+video.ishiba-masked {
+  filter: blur(var(--ishiba-blur, 18px)) grayscale(0.4) !important;
+  transition: filter .15s ease;
+}
+
+img.ishiba-masked-black,
+video.ishiba-masked-black {
+  filter: brightness(0) !important;
+}
+
+.ishiba-masked-hidden {
+  visibility: hidden !important;
+}
+
+/* ホバーで一時的に元に戻す（設定で ON のとき body に付与） */
+body.ishiba-peek img.ishiba-masked:hover,
+body.ishiba-peek video.ishiba-masked:hover,
+body.ishiba-peek img.ishiba-masked-black:hover,
+body.ishiba-peek video.ishiba-masked-black:hover {
+  filter: none !important;
+}
+
+.ishiba-text-masked {
+  background: #333 !important;
+  color: transparent !important;
+  border-radius: 2px;
+}
+
+/* 先読みブラー: ページに名前が見つかってから判定が終わるまで、画像を一律でぼかす。
+   content.css は document_start で注入されるので、最初の描画に間に合う。 */
+html.ishiba-prescan img,
+html.ishiba-prescan video,
+html.ishiba-prescan picture {
+  filter: blur(var(--ishiba-blur, 18px)) grayscale(0.4) !important;
+}

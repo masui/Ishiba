@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MaskIshiba</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { width: 300px; margin: 0; padding: 12px 14px 14px;
+         font: 13px/1.6 -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  h1 { font-size: 14px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  h1 .count { margin-left: auto; font-weight: normal; font-size: 11px; opacity: .7; }
+  section { border-top: 1px solid rgba(128,128,128,.3); padding: 8px 0 4px; }
+  label { display: block; margin: 3px 0; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row > label { margin: 0; }
+  input[type=text] { width: 100%; box-sizing: border-box; padding: 3px 5px; }
+  textarea { width: 100%; box-sizing: border-box; height: 46px; padding: 3px 5px; font-size: 12px; }
+  input[type=range] { width: 150px; }
+  .sub { font-size: 11px; opacity: .65; margin: 2px 0 6px; }
+  .switch { font-weight: 600; }
+  button { padding: 4px 10px; }
+  #hostBtn { width: 100%; margin-top: 6px; }
+</style>
+
+<h1>🫥 MaskIshiba <span class="count" id="count"></span></h1>
+
+<label class="switch"><input type="checkbox" id="enabled"> 有効にする</label>
+
+<section>
+  <div class="sub">見つけたときの処理</div>
+  <label><input type="radio" name="mode" value="blur"> ぼかす</label>
+  <label><input type="radio" name="mode" value="black"> 黒く塗りつぶす</label>
+  <label><input type="radio" name="mode" value="replace"> 別の画像に置き換える</label>
+  <label><input type="radio" name="mode" value="hide"> 非表示にする</label>
+
+  <div class="row" id="blurRow"><label>ぼかし</label>
+    <input type="range" id="blur" min="2" max="60" step="1"><span id="blurVal"></span></div>
+
+  <div id="replaceRow">
+    <div class="row"><label>絵文字</label><input type="text" id="emoji" style="width:60px"></div>
+    <input type="text" id="replaceUrl" placeholder="画像URL（空なら絵文字）">
+  </div>
+</section>
+
+<section>
+  <div class="sub">判定の強さ</div>
+  <label><input type="radio" name="strictness" value="strict"> 厳しめ（画像の説明文・ファイル名だけ）</label>
+  <label><input type="radio" name="strictness" value="normal"> ふつう（キャプションや周辺の文も見る）</label>
+  <label><input type="radio" name="strictness" value="loose"> ゆるめ（名前が出てくる記事の画像は全部）</label>
+</section>
+
+<section>
+  <label><input type="checkbox" id="preMask"> 先読みブラー（判定が済むまで画像を隠す）</label>
+  <div class="sub">名前が出てくるページでは、判定が終わるまで画像を一律ぼかします。一瞬でも見えてしまうのを防げます。</div>
+  <label><input type="checkbox" id="peek"> マウスを乗せたら一時的に元に戻す</label>
+  <label><input type="checkbox" id="maskText"> 本文中の名前も塗りつぶす</label>
+</section>
+
+<section>
+  <div class="sub">キーワード（カンマか改行区切り）</div>
+  <textarea id="keywords"></textarea>
+  <button id="hostBtn"></button>
+</section>
+<script src="popup.js"></script>
