@@ -17,13 +17,29 @@ function el(tag, attrs = {}, opts = {}) {
     setAttribute(n, v) { this.attrs[n] = v }, removeAttribute(n) { delete this.attrs[n] },
     offsetWidth: opts.w ?? 300, offsetHeight: opts.h ?? 200,
     get textContent() { return opts.text ?? this.children.map(c => c.textContent).join('') },
-    closest(sel) { let n = this; const t = sel.toUpperCase();
-      while (n) { if (n.tagName === t) return n; n = n.parentElement } return null },
+    closest(sel) { let n = this;
+      while (n) { if (matchesSel(n, sel)) return n; n = n.parentElement } return null },
     querySelector() { return opts.figcaption || null },
     querySelectorAll() { return opts.all || [] },
   };
   return e;
 }
+// tag / [attr="v"] / [attr*="v"] とカンマ区切りだけ対応する簡易セレクタ
+function matchesSel(el, sel) {
+  return sel.split(',').some(one => {
+    one = one.trim();
+    const m = one.match(/^([a-zA-Z]*)(?:\[([\w-]+)([*^]?)=?"?([^"\]]*)"?\])?$/);
+    if (!m) return false;
+    const [, tag, attr, op, val] = m;
+    if (tag && el.tagName !== tag.toUpperCase()) return false;
+    if (!attr) return !!tag;
+    const v = el.getAttribute(attr);
+    if (v === null) return false;
+    if (!val) return true;
+    return op === '*' ? v.includes(val) : v === val;
+  });
+}
+
 function nest(parent, child) { child.parentElement = parent; parent.children.push(child); return parent; }
 
 // content.js を新しい環境で評価する
@@ -89,6 +105,29 @@ check('無関係な画像', T(el('img', { alt: '国会議事堂', src: '/img/die
   check('短い親テキスト', T(img), true);
 }
 
+console.log('[投稿ブロック単位（Facebook / X など）]');
+{
+  // alt もファイル名も手がかりが無く、本文が画像から離れている SNS の構造
+  const post = el('div', { role: 'article' }, { text: '友達がシェア：' + 'あ'.repeat(800) + '石破前首相の会見について' });
+  const wrap1 = el('div'), wrap2 = el('div');
+  const img = el('img', { alt: '1人、テキストの画像のようです', src: 'https://scontent.xx.fbcdn.net/v/t39.30808-6/abc123_n.jpg' });
+  nest(post, wrap1); nest(wrap1, wrap2); nest(wrap2, img);
+  check('投稿本文で判定できる', T(img), true);
+
+  const other = el('div', { role: 'article' }, { text: '今日のランチ' + 'あ'.repeat(500) });
+  const img2 = el('img', { alt: '食べ物の画像のようです', src: 'https://scontent.xx.fbcdn.net/v/x_n.jpg' });
+  nest(other, img2);
+  check('名前の無い投稿は残る', T(img2), false);
+
+  const huge = el('div', { role: 'article' }, { text: 'あ'.repeat(4000) + '石破' });
+  const img3 = el('img', { src: '/x.jpg' }); nest(huge, img3);
+  check('大きすぎる塊は無視（誤爆防止）', T(img3), false);
+
+  const labeled = el('div', { role: 'article', 'aria-label': '石破茂さんの投稿' });
+  const img4 = el('img', { src: '/y.jpg' }); nest(labeled, img4);
+  check('投稿の aria-label で判定', T(img4), true);
+}
+
 console.log('[strict モード]');
 S._run("settings.strictness='strict'; pageMentionsCache=null;");
 {
@@ -96,6 +135,9 @@ S._run("settings.strictness='strict'; pageMentionsCache=null;");
   const img = el('img', { src: '/p/3.jpg' }); nest(div, img);
   check('周辺文は見ない', T(img), false);
   check('alt は見る', T(el('img', { alt: '石破' })), true);
+  const post = el('div', { role: 'article' }, { text: '石破前首相の会見' });
+  const pimg = el('img', { src: '/z.jpg' }); nest(post, pimg);
+  check('投稿ブロックも見ない', T(pimg), false);
 }
 
 console.log('[loose モード]');

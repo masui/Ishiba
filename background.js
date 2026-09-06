@@ -17,7 +17,7 @@ chrome.runtime.onInstalled.addListener(() => {
     if (!cur || Object.keys(cur).length === 0) {
       chrome.storage.sync.set({
         enabled: true, mode: 'blur', blur: 18, emoji: '🐈', replaceUrl: '',
-        peek: true, preMask: true, maskText: false, minSize: 40, strictness: 'normal',
+        peek: false, preMask: true, maskText: false, minSize: 40, strictness: 'normal',
         keywords: ['石破', '石破茂', 'いしば', 'イシバ', 'Ishiba', 'ishiba', 'shigeru ishiba'],
         disabledHosts: []
       });

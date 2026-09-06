@@ -1,6 +1,6 @@
 const DEFAULTS = {
   enabled: true, mode: 'blur', blur: 18, emoji: '🐈', replaceUrl: '',
-  peek: true, preMask: true, maskText: false, minSize: 40, strictness: 'normal',
+  peek: false, preMask: true, maskText: false, minSize: 40, strictness: 'normal',
   keywords: ['石破', '石破茂', 'いしば', 'イシバ', 'Ishiba', 'ishiba', 'shigeru ishiba'],
   disabledHosts: []
 };
@@ -24,7 +24,9 @@ function render() {
   $('peek').checked = state.peek;
   $('preMask').checked = state.preMask;
   $('maskText').checked = state.maskText;
-  $('keywords').value = (state.keywords || []).join(', ');
+  if (document.activeElement !== $('keywords')) {
+    $('keywords').value = (state.keywords || []).join(', ');
+  }
   $('blurRow').style.display = state.mode === 'blur' ? '' : 'none';
   $('replaceRow').style.display = state.mode === 'replace' ? '' : 'none';
   const off = (state.disabledHosts || []).includes(host);
@@ -45,9 +47,18 @@ $('maskText').onchange = e => save({ maskText: e.target.checked });
 $('blur').oninput = e => { $('blurVal').textContent = e.target.value + 'px'; save({ blur: +e.target.value }); };
 $('emoji').oninput = e => save({ emoji: e.target.value });
 $('replaceUrl').oninput = e => save({ replaceUrl: e.target.value.trim() });
-$('keywords').onchange = e => save({
-  keywords: e.target.value.split(/[,、\n]/).map(s => s.trim()).filter(Boolean)
-});
+// 入力の途中で閉じても消えないよう、打ちながら自動保存する
+let kwTimer = null;
+$('keywords').oninput = e => {
+  const v = e.target.value;
+  clearTimeout(kwTimer);
+  kwTimer = setTimeout(() => {
+    const list = v.split(/[,、\n]/).map(s => s.trim()).filter(Boolean);
+    state.keywords = list;
+    chrome.storage.sync.set({ keywords: list });
+    $('kwNote').textContent = `${list.length} 個を保存しました`;
+  }, 400);
+};
 document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => save({ mode: radio('mode') }));
 document.querySelectorAll('input[name=strictness]').forEach(r =>
   r.onchange = () => save({ strictness: radio('strictness') }));

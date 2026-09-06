@@ -13,7 +13,7 @@ const DEFAULTS = {
   blur: 18,
   emoji: '🐈',
   replaceUrl: '',
-  peek: true,              // マウスオーバーで一時的に元画像を表示
+  peek: false,             // マウスオーバーで一時的に元画像を表示（既定 OFF）
   preMask: true,           // 名前が出てきたら、判定が終わるまで画像を一律ブラー（一瞬見えるのを防ぐ）
   maskText: false,         // 本文中の名前も塗りつぶす
   minSize: 40,             // これより小さい画像は無視（アイコン避け）
@@ -26,6 +26,15 @@ let settings = { ...DEFAULTS };
 let lowerKeywords = [];
 const masked = new Set();       // マスク済み要素
 let checked = new WeakSet();    // 判定済み要素
+let tries = new WeakMap();      // 「対象でない」と判定した回数（SPA では本文が後から届く）
+const MAX_TRIES = 6;
+
+// 何度か判定して駄目なら以後スキップする（毎回全画像を調べ続けないため）
+function giveUp(el) {
+  const n = (tries.get(el) || 0) + 1;
+  tries.set(el, n);
+  return n >= MAX_TRIES;
+}
 const textSpans = new Set();    // 文字マスク用に作った span
 
 /* ---------- ユーティリティ ---------- */
@@ -58,6 +67,13 @@ function replacementImage() {
 const IMG_ATTRS = ['alt', 'title', 'aria-label', 'data-src', 'data-original',
                    'data-lazy-src', 'data-srcset', 'data-caption'];
 
+// SNS の「1投稿」を表す入れ物。Facebook / X などは本文が画像から DOM 上遠く、
+// 画像の alt も URL も手がかりにならないので、投稿ブロックごと見る必要がある。
+const POST_SELECTOR = 'article,[role="article"],[role="listitem"],[data-testid*="post"],' +
+  '[data-ad-preview],[class*="post"],[class*="tweet"],[class*="status"],[class*="entry"],' +
+  '[class*="card"],[class*="feed"],li';
+const POST_TEXT_LIMIT = 3000;
+
 // ページ全体（タイトル・本文）に名前が出てくるか
 let pageMentionsCache = null;
 function pageMentions() {
@@ -89,6 +105,14 @@ function looksLikeTarget(img) {
   }
 
   if (settings.strictness === 'strict') return false;
+
+  // 投稿ブロック単位（Facebook / X など）。本文がそこそこ長くても投稿1件分なら見る。
+  const post = img.closest(POST_SELECTOR);
+  if (post) {
+    if (matchText(post.getAttribute('aria-label'))) return true;
+    const t = post.textContent || '';
+    if (t.length <= POST_TEXT_LIMIT && matchText(t)) return true;
+  }
 
   // 写真キャプション
   const fig = img.closest('figure');
@@ -288,9 +312,9 @@ function scan(root = document) {
   const imgs = root.querySelectorAll ? root.querySelectorAll('img, video') : [];
   for (const img of imgs) {
     if (checked.has(img)) continue;
-    if (tooSmall(img)) { if (!parsing) checked.add(img); continue; }
+    if (tooSmall(img)) { if (!parsing && giveUp(img)) checked.add(img); continue; }
     if (looksLikeTarget(img)) { checked.add(img); maskImage(img); n++; }
-    else if (!parsing) checked.add(img);
+    else if (!parsing && giveUp(img)) checked.add(img);
   }
 
   let count = 0;
@@ -298,7 +322,7 @@ function scan(root = document) {
   for (const el of bgs) {
     if (++count > 2000) break;
     if (checked.has(el) || masked.has(el)) continue;
-    if (!parsing) checked.add(el);
+    if (!parsing && giveUp(el)) checked.add(el);
     const inline = el.style && el.style.backgroundImage;
     const bg = inline || (el.children.length < 30 ? getComputedStyle(el).backgroundImage : 'none');
     if (!bg || bg === 'none' || !bg.includes('url(')) continue;
@@ -437,6 +461,7 @@ function applySettings() {
   refreshKeywords();
   pageMentionsCache = null;
   checked = new WeakSet();
+  tries = new WeakMap();
   unmaskAll();
   if (!settings.enabled || hostDisabled() || !settings.preMask) releasePrescan();
   if (!settings.enabled || hostDisabled()) return;
