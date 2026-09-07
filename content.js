@@ -18,12 +18,13 @@ const DEFAULTS = {
   maskText: false,         // 本文中の名前も塗りつぶす
   minSize: 40,             // これより小さい画像は無視（アイコン避け）
   strictness: 'normal',    // strict: 画像の属性/URLのみ / normal: 周辺の文脈も見る / loose: 名前が出るページの画像は全部
-  keywords: ['石破', '石破茂', 'いしば', 'イシバ', 'Ishiba', 'ishiba', 'shigeru ishiba'],
+  keywords: ['石破', 'イシバ', 'Ishiba'],
   disabledHosts: []
 };
 
 let settings = { ...DEFAULTS };
-let lowerKeywords = [];
+let keywordRe = null;           // 画像判定用（i）
+let keywordReGlobal = null;     // 本文の塗りつぶし用（gi）
 const masked = new Set();       // マスク済み要素
 let checked = new WeakSet();    // 判定済み要素
 let tries = new WeakMap();      // 「対象でない」と判定した回数（SPA では本文が後から届く）
@@ -39,10 +40,26 @@ const textSpans = new Set();    // 文字マスク用に作った span
 
 /* ---------- ユーティリティ ---------- */
 
+// キーワードの照合。
+//   ラテン文字（Ishiba 等）は前後を単語境界で区切る。単純な部分一致だと
+//   "Samurai Shiba" → textContent 連結で "samuraishiba" → "ishiba" に化けて誤爆するため。
+//   日本語（石破 等）は語の区切りが無いので従来どおり部分一致にする。
+const isLatin = k => !/[^\x00-\x7f]/.test(k);
+const escapeRe = k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function buildKeywordRe(list, flags) {
+  const parts = list.map(k => {
+    const esc = escapeRe(k.toLowerCase());
+    // 前後が英数字なら別語とみなす（"ishiba_2024.jpg" や "Ishiba's" は拾いたいので _ . ' は境界扱い）
+    return isLatin(k) ? `(?<![a-z0-9])${esc}(?![a-z0-9])` : esc;
+  });
+  return parts.length ? new RegExp(parts.join('|'), flags) : null;
+}
+
 function matchText(s) {
-  if (!s) return false;
-  const t = String(s).toLowerCase();
-  return lowerKeywords.some(k => k && t.includes(k));
+  if (!s || !keywordRe) return false;
+  keywordRe.lastIndex = 0;
+  return keywordRe.test(String(s).toLowerCase());
 }
 
 function matchUrl(u) {
@@ -258,16 +275,15 @@ function unmaskAll() {
 /* ---------- 本文中の名前のマスク ---------- */
 
 function maskTextNodes(root) {
-  if (!settings.maskText || !lowerKeywords.length) return;
-  const re = new RegExp(settings.keywords.filter(Boolean)
-    .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gi');
+  if (!settings.maskText || !keywordReGlobal) return;
+  const re = keywordReGlobal;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(n) {
       const p = n.parentElement;
       if (!p) return NodeFilter.FILTER_REJECT;
       if (/^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT|TITLE)$/.test(p.tagName)) return NodeFilter.FILTER_REJECT;
       if (p.isContentEditable || p.classList.contains('ishiba-text-masked')) return NodeFilter.FILTER_REJECT;
-      return re.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      return matchText(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     }
   });
   const targets = [];
@@ -454,7 +470,9 @@ function hostDisabled() {
 }
 
 function refreshKeywords() {
-  lowerKeywords = (settings.keywords || []).map(k => String(k).toLowerCase().trim()).filter(Boolean);
+  const list = (settings.keywords || []).map(k => String(k).trim()).filter(Boolean);
+  keywordRe = buildKeywordRe(list, 'i');
+  keywordReGlobal = buildKeywordRe(list, 'gi');
 }
 
 function applySettings() {

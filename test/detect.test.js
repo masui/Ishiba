@@ -105,6 +105,27 @@ check('無関係な画像', T(el('img', { alt: '国会議事堂', src: '/img/die
   check('短い親テキスト', T(img), true);
 }
 
+console.log('[誤爆しないこと]');
+check('Samurai Shiba の投稿', T(el('img', { alt: 'Samurai Shiba' })), false);
+check('連結された SamuraiShiba', T(el('img', { alt: 'SamuraiShiba' })), false);
+check('@samuraishiba のリンク',
+      T(el('img', { src: 'https://www.facebook.com/samuraishiba/photos/1.jpg' })), false);
+check('shiba だけ', T(el('img', { alt: 'Shiba Inu' })), false);
+check('ishibashi（石橋）', T(el('img', { alt: 'Ishibashi Takashi' })), false);
+{
+  const post = el('div', { role: 'article' }, { text: 'Samurai Shiba さんが写真を投稿しました' });
+  const img = el('img', { alt: '', src: 'https://scontent.xx.fbcdn.net/v/a.jpg' }); nest(post, img);
+  check('Samurai Shiba さんの投稿ブロック', T(img), false);
+}
+check('ファイル名 ishiba_2024.jpg は拾う', T(el('img', { src: '/img/ishiba_2024.jpg' })), true);
+check("Ishiba's は拾う", T(el('img', { alt: "Ishiba's press conference" })), true);
+check('Shigeru Ishiba は拾う', T(el('img', { alt: 'Shigeru Ishiba' })), true);
+check('石破茂（部分一致）は拾う', T(el('img', { alt: '石破茂' })), true);
+{
+  const s2 = load({ stored: { keywords: ['いしば'] } });
+  check('日本語キーワードは従来どおり部分一致', s2.looksLikeTarget(el('img', { alt: 'いしば' })), true);
+}
+
 console.log('[投稿ブロック単位（Facebook / X など）]');
 {
   // alt もファイル名も手がかりが無く、本文が画像から離れている SNS の構造

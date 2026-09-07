@@ -1,7 +1,7 @@
 const DEFAULTS = {
   enabled: true, mode: 'blur', blur: 18, emoji: '🐈', replaceUrl: '',
   peek: false, preMask: true, maskText: false, minSize: 40, strictness: 'normal',
-  keywords: ['石破', '石破茂', 'いしば', 'イシバ', 'Ishiba', 'ishiba', 'shigeru ishiba'],
+  keywords: ['石破', 'イシバ', 'Ishiba'],
   disabledHosts: []
 };
 
